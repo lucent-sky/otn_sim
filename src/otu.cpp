@@ -10,7 +10,7 @@ bool Otu::fec_enabled() const {
     return fec_enabled_;
 }
 
-uint8_t Otu::odu_level() const {
+OduLevel Otu::odu_level() const {
     return odu_.level();
 }
 

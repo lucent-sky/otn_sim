@@ -31,6 +31,11 @@ Odu::Odu(OduLevel level, std::vector<Odu> children)
     }
 }
 
+Odu::Odu(OduLevel level, const Opu& opu)
+    : level_(level),
+      payload_bytes_(opu.payload_size())
+{}
+
 OduLevel Odu::level() const {
     return level_;
 }

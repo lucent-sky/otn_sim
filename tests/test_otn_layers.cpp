@@ -51,5 +51,13 @@ TEST(OtuTest, OtuWrapsOduCorrectly) {
 
     EXPECT_TRUE(otu.fec_enabled());
     EXPECT_EQ(otu.payload_size(), 300);
-    EXPECT_EQ(otu.odu_level(), static_cast<uint8_t>(OduLevel::ODU2));
+    EXPECT_EQ(otu.odu_level(), OduLevel::ODU2);
+}
+
+
+TEST(OduTest, CanConstructFromOpu) {
+    Payload p(400);
+    Opu opu(p);
+    Odu odu(OduLevel::ODU2, opu);
+    EXPECT_EQ(odu.payload_size(), 400);
 }

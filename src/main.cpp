@@ -1,4 +1,7 @@
 #include <iostream>
+#include "otn/payload.hpp"
+#include "otn/opu.hpp"
+#include "otn/odu.hpp"
 #include "otn/otu.hpp"
 
 int main() {
@@ -6,7 +9,7 @@ int main() {
 
     Payload payload(1500);
     Opu opu(payload);
-    Odu odu(opu, 2);
+    Odu odu(OduLevel::ODU2, opu);
     Otu otu(odu, true);
 
     std::cout << "OTN Simulator\n";

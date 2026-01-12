@@ -8,7 +8,7 @@ public:
     Otu(const Odu& odu, bool fec_enabled);
 
     bool fec_enabled() const;
-    uint8_t odu_level() const;
+    OduLevel odu_level() const;
     size_t payload_size() const;
 
 private:

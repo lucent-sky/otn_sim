@@ -3,6 +3,7 @@
 #include "otn_types.hpp"
 #include <cstddef>
 #include <vector>
+#include "opu.hpp"
 
 namespace otn {
 
@@ -10,6 +11,9 @@ class Odu {
 public:
     // Leaf ODU (originating from client payload / OPU)
     explicit Odu(OduLevel level, size_t payload_bytes);
+
+    // Leaf ODU constructed directly from an OPU
+    explicit Odu(OduLevel level, const Opu& opu);
 
     // Aggregated ODU (from mux)
     Odu(OduLevel level, std::vector<Odu> children);
