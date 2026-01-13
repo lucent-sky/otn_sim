@@ -8,6 +8,7 @@ namespace otn {
 enum class OduLevel : uint8_t {
     ODU1 = 1,
     ODU2 = 2,
+    ODU3 = 3,
     ODU4 = 4
 };
 
