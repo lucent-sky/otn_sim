@@ -174,7 +174,7 @@ TEST(MuxTest, CapacityOverflowFails) {
         children.emplace_back(OduLevel::ODU1, child_capacity);
     }
 
-    // add one byte to overflow
+    // add one byte to cause overflow
     children.emplace_back(OduLevel::ODU1, 1);
 
     Odu parent(OduLevel::ODU2, 0);
@@ -200,3 +200,11 @@ TEST(MuxTest, CapacityBoundarySucceeds) {
     EXPECT_EQ(result.status, MuxStatus::SUCCESS);
 }
 
+TEST(MuxTest, NonAdjacentHierarchyFails) {
+    Odu c1(OduLevel::ODU1, 1000);
+
+    Odu parent(OduLevel::ODU3, 0);
+    auto result = mux(OduLevel::ODU3, {c1}, parent);
+
+    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
+}

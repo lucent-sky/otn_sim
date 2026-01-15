@@ -75,10 +75,12 @@ MuxResult mux(
     size_t total_payload = 0;
 
     for (const auto& child : children) {
-        if (static_cast<uint8_t>(child.level()) >=
-            static_cast<uint8_t>(parent_level)) {
+        uint8_t child_lvl  = static_cast<uint8_t>(child.level());
+        uint8_t parent_lvl = static_cast<uint8_t>(parent_level);
+        // parent must be exactly 1 higher than child to mux
+        if (parent_lvl != child_lvl + 1) {
             return MuxResult::invalid_hierarchy(
-                "Parent level is higher than child - can't mux"
+                "ODU levels must be adjacent"
             );
         }
         total_payload += child.payload_size();
