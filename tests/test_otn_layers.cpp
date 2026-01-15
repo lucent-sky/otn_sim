@@ -22,7 +22,7 @@ TEST(OpuTest, PayloadPassThrough) {
     EXPECT_EQ(opu.payload_size(), 500);
 }
 
-// ---------------- ODU (Day 3 model) ----------------
+// ---------------- ODU ----------------
 
 TEST(OduTest, LeafOduHasCorrectLevelAndPayload) {
     Odu odu(OduLevel::ODU2, 200);
@@ -138,4 +138,36 @@ TEST(OduCapacityTest, AggregatedCannotExceedNominalCapacity) {
         Odu(OduLevel::ODU1, {c1, c2}),
         std::runtime_error
     );
+}
+
+// ---------------- Mux testing ----------------
+
+TEST(MuxTest, ValidMuxSucceeds) {
+    Odu c1(OduLevel::ODU1, 100);
+    Odu c2(OduLevel::ODU1, 200);
+
+    Odu parent(OduLevel::ODU2, 0); // dummy init
+    auto result = mux(OduLevel::ODU2, {c1, c2}, parent);
+
+    EXPECT_EQ(result.status, MuxStatus::SUCCESS);
+    EXPECT_EQ(parent.payload_size(), 300);
+    EXPECT_TRUE(parent.is_aggregated());
+}
+
+TEST(MuxTest, InvalidHierarchyFails) {
+    Odu c1(OduLevel::ODU2, 100);
+
+    Odu parent(OduLevel::ODU2, 0);
+    auto result = mux(OduLevel::ODU2, {c1}, parent);
+
+    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
+}
+
+TEST(MuxTest, CapacityOverflowFails) {
+    Odu big(OduLevel::ODU1, nominal_capacity(OduLevel::ODU2) + 1);
+
+    Odu parent(OduLevel::ODU2, 0);
+    auto result = mux(OduLevel::ODU2, {big}, parent);
+
+    EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
 }

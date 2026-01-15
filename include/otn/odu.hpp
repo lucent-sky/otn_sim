@@ -29,4 +29,11 @@ private:
     std::vector<Odu> children_;
 };
 
+MuxResult mux(
+    OduLevel parent_level,
+    const std::vector<Odu>& children,
+    Odu& out_parent
+);
+
+
 } // namespace otn

@@ -63,4 +63,36 @@ bool Odu::is_aggregated() const {
     return !children_.empty();
 }
 
+MuxResult mux(
+    OduLevel parent_level,
+    const std::vector<Odu>& children,
+    Odu& out_parent
+) {
+    if (children.empty()) {
+        return MuxResult::invalid_hierarchy("Can't mux without children!");
+    }
+
+    size_t total_payload = 0;
+
+    for (const auto& child : children) {
+        if (static_cast<uint8_t>(child.level()) >=
+            static_cast<uint8_t>(parent_level)) {
+            return MuxResult::invalid_hierarchy(
+                "Parent level is higher than child - can't mux"
+            );
+        }
+        total_payload += child.payload_size();
+    }
+
+    size_t capacity = nominal_capacity(parent_level);
+    if (total_payload > capacity) {
+        return MuxResult::insufficient_capacity(
+            "Aggregated payload is above nominal capacity"
+        );
+    }
+
+    out_parent = Odu(parent_level, children);
+    return MuxResult::success();
+}
+
 } // namespace otn
