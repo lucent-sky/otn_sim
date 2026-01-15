@@ -12,6 +12,8 @@ enum class OduLevel : uint8_t {
     ODU4 = 4
 };
 
+size_t nominal_capacity(OduLevel level);
+
 enum class MuxStatus {
     SUCCESS,
     INVALID_HIERARCHY,

@@ -12,6 +12,7 @@ add_library(otn
     src/opu.cpp
     src/odu.cpp
     src/otu.cpp
+    src/otn_types.cpp
 )
 
 # main
