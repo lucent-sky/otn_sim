@@ -208,3 +208,13 @@ TEST(MuxTest, NonAdjacentHierarchyFails) {
 
     EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
 }
+
+TEST(MuxTest, MixedChildLevelsFail) {
+    Odu c1(OduLevel::ODU1, 1000);
+    Odu c2(OduLevel::ODU2, 1000);
+
+    Odu parent(OduLevel::ODU3, 0);
+    auto result = mux(OduLevel::ODU3, {c1, c2}, parent);
+
+    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
+}

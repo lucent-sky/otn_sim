@@ -69,7 +69,16 @@ MuxResult mux(
     Odu& out_parent
 ) {
     if (children.empty()) {
-        return MuxResult::invalid_hierarchy("Can't mux without children!");
+        return MuxResult::invalid_hierarchy("Can't mux without children");
+    }
+
+    OduLevel expected = children.front().level();
+    for (const auto& child : children) {
+        if (child.level() != expected) {
+            return MuxResult::invalid_hierarchy(
+                "All children must have same ODU level"
+            );
+        }
     }
 
     size_t total_payload = 0;
