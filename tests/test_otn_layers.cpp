@@ -164,10 +164,39 @@ TEST(MuxTest, InvalidHierarchyFails) {
 }
 
 TEST(MuxTest, CapacityOverflowFails) {
-    Odu big(OduLevel::ODU1, nominal_capacity(OduLevel::ODU2) + 1);
+    size_t parent_capacity = nominal_capacity(OduLevel::ODU2);
+    size_t child_capacity  = nominal_capacity(OduLevel::ODU1);
+
+    size_t max_children = parent_capacity / child_capacity;
+
+    std::vector<Odu> children;
+    for (size_t i = 0; i < max_children; ++i) {
+        children.emplace_back(OduLevel::ODU1, child_capacity);
+    }
+
+    // add one byte to overflow
+    children.emplace_back(OduLevel::ODU1, 1);
 
     Odu parent(OduLevel::ODU2, 0);
-    auto result = mux(OduLevel::ODU2, {big}, parent);
+    auto result = mux(OduLevel::ODU2, children, parent);
 
     EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
 }
+
+TEST(MuxTest, CapacityBoundarySucceeds) {
+    size_t parent_capacity = nominal_capacity(OduLevel::ODU2);
+    size_t child_capacity  = nominal_capacity(OduLevel::ODU1);
+
+    size_t max_children = parent_capacity / child_capacity;
+
+    std::vector<Odu> children;
+    for (size_t i = 0; i < max_children; ++i) {
+        children.emplace_back(OduLevel::ODU1, child_capacity);
+    }
+
+    Odu parent(OduLevel::ODU2, 0);
+    auto result = mux(OduLevel::ODU2, children, parent);
+
+    EXPECT_EQ(result.status, MuxStatus::SUCCESS);
+}
+
