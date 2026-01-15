@@ -1,4 +1,5 @@
 #include "otn/odu.hpp"
+#include <stdexcept>
 
 namespace otn {
 
@@ -19,16 +20,26 @@ size_t capacity_for_level(OduLevel level) {
 Odu::Odu(OduLevel level, size_t payload_bytes)
     : level_(level),
       payload_bytes_(payload_bytes)
-{}
+{
+    if (payload_bytes_ > nominal_capacity(level_)) {
+        throw std::runtime_error("ODU payload exceeds nominal capacity");
+    }
+}
 
 Odu::Odu(OduLevel level, std::vector<Odu> children)
     : level_(level),
       children_(std::move(children))
 {
-    payload_bytes_ = 0;
-    for (const auto& child : children_) {
-        payload_bytes_ += child.payload_size();
+    size_t sum = 0;
+    for (const auto& c : children_) {
+        sum += c.payload_size();
     }
+
+    if (sum > nominal_capacity(level_)) {
+        throw std::runtime_error("Aggregated ODU exceeds nominal capacity");
+    }
+
+    payload_bytes_ = sum;
 }
 
 Odu::Odu(OduLevel level, const Opu& opu)

@@ -116,3 +116,26 @@ TEST(OtuTest, FecFlagDoesNotAffectPayloadSize) {
     EXPECT_EQ(otu_no_fec.payload_size(), 100);
     EXPECT_EQ(otu_fec.payload_size(), 100);
 }
+
+// ---------------- Nominal capacities tests ----------------
+TEST(OduCapacityTest, NominalCapacitiesExist) {
+    EXPECT_GT(nominal_capacity(OduLevel::ODU1), 0);
+    EXPECT_GT(nominal_capacity(OduLevel::ODU4), nominal_capacity(OduLevel::ODU2));
+}
+
+TEST(OduCapacityTest, LeafCannotExceedNominalCapacity) {
+    EXPECT_THROW(
+        Odu(OduLevel::ODU1, nominal_capacity(OduLevel::ODU1) + 1),
+        std::runtime_error
+    );
+}
+
+TEST(OduCapacityTest, AggregatedCannotExceedNominalCapacity) {
+    Odu c1(OduLevel::ODU1, 2000);
+    Odu c2(OduLevel::ODU1, 2000);
+
+    EXPECT_THROW(
+        Odu(OduLevel::ODU1, {c1, c2}),
+        std::runtime_error
+    );
+}
