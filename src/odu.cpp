@@ -70,7 +70,7 @@ Odu::Odu(OduLevel level, std::vector<GroomedChild> groomed)
     std::vector<bool> slot_map(parent_slots, false);
 
     for (const auto& gc : groomed_children_) {
-        const Odu& child = gc.child;
+        const Odu& child = *(gc.child);
         const size_t offset = gc.slot_offset;
         const size_t child_slots = child.slots();
 
@@ -129,9 +129,9 @@ MuxResult mux(
     }
 
     // all children must be same level
-    OduLevel expected = groomed_children.front().child.level();
+    OduLevel expected = groomed_children.front().child->level();
     for (const auto& gc : groomed_children) {
-        if (gc.child.level() != expected) {
+        if (gc.child->level() != expected) {
             return MuxResult::invalid_hierarchy(
                 "All children must have same ODU level"
             );

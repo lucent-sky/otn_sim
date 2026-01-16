@@ -36,7 +36,11 @@ TEST(OduTest, AggregatedOduSumsChildren) {
     Odu child1(OduLevel::ODU1, 100);
     Odu child2(OduLevel::ODU1, 150);
 
-    Odu parent(OduLevel::ODU2, {child1, child2});
+    std::vector<GroomedChild> groomed = {
+        {&child1, child1.slots(), 0},
+        {&child2, child2.slots(), 1}
+    };
+    Odu parent(OduLevel::ODU2, groomed);
 
     EXPECT_EQ(parent.level(), OduLevel::ODU2);
     EXPECT_EQ(parent.payload_size(), 250);
@@ -67,8 +71,16 @@ TEST(OduTest, NestedAggregationSumsCorrectly) {
     Odu leaf1(OduLevel::ODU1, 100);
     Odu leaf2(OduLevel::ODU1, 200);
 
-    Odu mid(OduLevel::ODU2, {leaf1, leaf2});
-    Odu top(OduLevel::ODU3, {mid});
+    std::vector<GroomedChild> mid_children = {
+        {&leaf1, leaf1.slots(), 0},
+        {&leaf2, leaf2.slots(), 1}
+    };
+    Odu mid(OduLevel::ODU2, mid_children);
+
+    std::vector<GroomedChild> top_children = {
+        {&mid, mid.slots(), 0}
+    };
+    Odu top(OduLevel::ODU3, top_children);
 
     EXPECT_EQ(top.payload_size(), 300);
     EXPECT_TRUE(top.is_aggregated());
@@ -77,7 +89,11 @@ TEST(OduTest, NestedAggregationSumsCorrectly) {
 // ---------------- Aggregated ODU test ----------------
 TEST(OduTest, AggregatedOduIsNotLeaf) {
     Odu child(OduLevel::ODU1, 100);
-    Odu parent(OduLevel::ODU2, {child});
+
+    std::vector<GroomedChild> groomed = {
+        {&child, child.slots(), 0}
+    };
+    Odu parent(OduLevel::ODU2, groomed);
 
     EXPECT_TRUE(parent.is_aggregated());
     EXPECT_NE(parent.payload_size(), 0u);
@@ -117,9 +133,9 @@ TEST(OtuTest, FecFlagDoesNotAffectPayloadSize) {
     EXPECT_EQ(otu_fec.payload_size(), 100);
 }
 
-// ---------------- Nominal capacities tests ----------------
-// DEPRECATED: nominal capacities have been removed
-/* TEST(OduCapacityTest, NominalCapacitiesExist) {
+// ---------------- Deprecated Nominal capacities tests ----------------
+/* DEPRECATED: nominal capacities removed
+TEST(OduCapacityTest, NominalCapacitiesExist) {
     EXPECT_GT(nominal_capacity(OduLevel::ODU1), 0);
     EXPECT_GT(nominal_capacity(OduLevel::ODU4), nominal_capacity(OduLevel::ODU2));
 }
@@ -141,119 +157,28 @@ TEST(OduCapacityTest, AggregatedCannotExceedNominalCapacity) {
     );
 } */
 
-// ---------------- Mux testing ----------------
-// DEPRECATED - mux has been changed to include grooming
+// ---------------- Deprecated Mux tests ----------------
+/* DEPRECATED - mux has been changed to include grooming
+TEST(MuxTest, ValidMuxSucceeds) { ... }
+TEST(MuxTest, InvalidHierarchyFails) { ... }
+TEST(MuxTest, CapacityOverflowFails) { ... }
+TEST(MuxTest, CapacityBoundarySucceeds) { ... }
+TEST(MuxTest, NonAdjacentHierarchyFails) { ... }
+TEST(MuxTest, MixedChildLevelsFail) { ... }
+*/
 
-/* TEST(MuxTest, ValidMuxSucceeds) {
-    Odu c1(OduLevel::ODU1, 100);
-    Odu c2(OduLevel::ODU1, 200);
-
-    Odu parent(OduLevel::ODU2, 0); // dummy init
-    auto result = mux(OduLevel::ODU2, {c1, c2}, parent);
-
-    EXPECT_EQ(result.status, MuxStatus::SUCCESS);
-    EXPECT_EQ(parent.payload_size(), 300);
-    EXPECT_TRUE(parent.is_aggregated());
-}
-
-TEST(MuxTest, InvalidHierarchyFails) {
-    Odu c1(OduLevel::ODU2, 100);
-
-    Odu parent(OduLevel::ODU2, 0);
-    auto result = mux(OduLevel::ODU2, {c1}, parent);
-
-    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
-}
-
-TEST(MuxTest, CapacityOverflowFails) {
-    size_t parent_capacity = nominal_capacity(OduLevel::ODU2);
-    size_t child_capacity  = nominal_capacity(OduLevel::ODU1);
-
-    size_t max_children = parent_capacity / child_capacity;
-
-    std::vector<Odu> children;
-    for (size_t i = 0; i < max_children; ++i) {
-        children.emplace_back(OduLevel::ODU1, child_capacity);
-    }
-
-    // add one byte to cause overflow
-    children.emplace_back(OduLevel::ODU1, 1);
-
-    Odu parent(OduLevel::ODU2, 0);
-    auto result = mux(OduLevel::ODU2, children, parent);
-
-    EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
-}
-
-TEST(MuxTest, CapacityBoundarySucceeds) {
-    size_t parent_capacity = nominal_capacity(OduLevel::ODU2);
-    size_t child_capacity  = nominal_capacity(OduLevel::ODU1);
-
-    size_t max_children = parent_capacity / child_capacity;
-
-    std::vector<Odu> children;
-    for (size_t i = 0; i < max_children; ++i) {
-        children.emplace_back(OduLevel::ODU1, child_capacity);
-    }
-
-    Odu parent(OduLevel::ODU2, 0);
-    auto result = mux(OduLevel::ODU2, children, parent);
-
-    EXPECT_EQ(result.status, MuxStatus::SUCCESS);
-}
-
-TEST(MuxTest, NonAdjacentHierarchyFails) {
-    Odu c1(OduLevel::ODU1, 1000);
-
-    Odu parent(OduLevel::ODU3, 0);
-    auto result = mux(OduLevel::ODU3, {c1}, parent);
-
-    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
-}
-
-TEST(MuxTest, MixedChildLevelsFail) {
-    Odu c1(OduLevel::ODU1, 1000);
-    Odu c2(OduLevel::ODU2, 1000);
-
-    Odu parent(OduLevel::ODU3, 0);
-    auto result = mux(OduLevel::ODU3, {c1, c2}, parent);
-
-    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
-} */
-
-// ---------------- Tributary slots testing ----------------
-
-TEST(MuxTest, TributarySlotOverflowFails) {
-    Odu c1(OduLevel::ODU1, 1000);
-    Odu c2(OduLevel::ODU1, 1000);
-    Odu c3(OduLevel::ODU1, 1000);
-    Odu c4(OduLevel::ODU1, 1000);
-    Odu c5(OduLevel::ODU1, 1000);  // 5 slots
-
-    Odu parent(OduLevel::ODU2, 0); // ODU2 has 4 slots
-
-    auto result = mux(OduLevel::ODU2, {c1,c2,c3,c4,c5}, parent);
-    EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
-}
-
-// ---------------- Explicit Grooming Tests ----------------
+// ---------------- Updated Explicit Grooming Tests ----------------
 
 TEST(GroomingTest, ValidExplicitGroomingSucceeds) {
     Odu c1(OduLevel::ODU1, 100);
     Odu c2(OduLevel::ODU1, 200);
 
-    GroomedChild g1{c1, 0}; // slots [0]
-    GroomedChild g2{c2, 1}; // slots [1]
+    GroomedChild g1{&c1, c1.slots(), 0};
+    GroomedChild g2{&c2, c2.slots(), 1};
 
-    Odu parent(OduLevel::ODU2, 0); // dummy init
+    std::vector<GroomedChild> groomed = {g1, g2};
+    Odu parent(OduLevel::ODU2, groomed);
 
-    auto result = mux(
-        OduLevel::ODU2,
-        {g1, g2},
-        parent
-    );
-
-    EXPECT_EQ(result.status, MuxStatus::SUCCESS);
     EXPECT_EQ(parent.slots(), 2u);
     EXPECT_EQ(parent.payload_size(), 300u);
     EXPECT_TRUE(parent.is_aggregated());
@@ -263,18 +188,15 @@ TEST(GroomingTest, OverlappingSlotsFail) {
     Odu c1(OduLevel::ODU1, 100);
     Odu c2(OduLevel::ODU1, 200);
 
-    GroomedChild g1{c1, 0};
-    GroomedChild g2{c2, 0}; // overlap
+    GroomedChild g1{&c1, c1.slots(), 0};
+    GroomedChild g2{&c2, c2.slots(), 0}; // overlap
 
-    Odu parent(OduLevel::ODU2, 0);
+    std::vector<GroomedChild> groomed = {g1, g2};
 
-    auto result = mux(
-        OduLevel::ODU2,
-        {g1, g2},
-        parent
+    EXPECT_THROW(
+        Odu(OduLevel::ODU2, groomed),
+        std::runtime_error
     );
-
-    EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
 }
 
 TEST(GroomingTest, SlotOverflowFails) {
@@ -284,35 +206,34 @@ TEST(GroomingTest, SlotOverflowFails) {
     Odu c4(OduLevel::ODU1, 100);
     Odu c5(OduLevel::ODU1, 100); // 5 slots
 
-    // ODU2 only has 4 slots
-    GroomedChild g1{c1, 0};
-    GroomedChild g2{c2, 1};
-    GroomedChild g3{c3, 2};
-    GroomedChild g4{c4, 3};
-    GroomedChild g5{c5, 4}; // out of bounds
+    GroomedChild g1{&c1, c1.slots(), 0};
+    GroomedChild g2{&c2, c2.slots(), 1};
+    GroomedChild g3{&c3, c3.slots(), 2};
+    GroomedChild g4{&c4, c4.slots(), 3};
+    GroomedChild g5{&c5, c5.slots(), 4}; // out of bounds
 
-    Odu parent(OduLevel::ODU2, 0);
+    std::vector<GroomedChild> groomed = {g1, g2, g3, g4, g5};
 
-    auto result = mux(
-        OduLevel::ODU2,
-        {g1, g2, g3, g4, g5},
-        parent
+    EXPECT_THROW(
+        Odu(OduLevel::ODU2, groomed),
+        std::runtime_error
     );
-
-    EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
 }
 
 TEST(GroomingTest, NonAdjacentHierarchyFails) {
     Odu c1(OduLevel::ODU1, 100);
-    GroomedChild g{c1, 0};
+    GroomedChild g{&c1, c1.slots(), 0};
 
-    Odu parent(OduLevel::ODU3, 0);
+    std::vector<GroomedChild> groomed = {g};
 
-    auto result = mux(
-        OduLevel::ODU3,
-        {g},
-        parent
+    EXPECT_THROW(
+        Odu(OduLevel::ODU3, groomed),
+        std::runtime_error
     );
-
-    EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
 }
+
+// ---------------- Grooming Planner Tests ----------------
+/* plan_grooming not implemented yet; tests left for future implementation
+TEST(GroomingPlannerTest, PlannerProducesValidGrooming) { ... }
+TEST(GroomingPlannerTest, PlannerThrowsOnOverflow) { ... }
+*/

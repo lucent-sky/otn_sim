@@ -7,9 +7,12 @@
 
 namespace otn {
 
+class Odu;  
+
 struct GroomedChild {
-    Odu child;
-    size_t slot_offset; // starting tributary slot
+    const Odu* child;
+    size_t slots;
+    size_t slot_offset;
 };
 
 class Odu {
@@ -36,13 +39,13 @@ private:
     OduLevel level_;
     size_t payload_bytes_;
     size_t slot_count_;
-    std::vector<Odu> children_;
+    std::vector<GroomedChild> groomed_children_;
 };
 
 MuxResult mux(
     OduLevel parent_level,
     //const std::vector<Odu>& children, DEPRECATED for grooming
-    std::vector<GroomedChild> groomed_children_;
+    const std::vector<GroomedChild>& groomed_children,
     Odu& out_parent
 );
 
