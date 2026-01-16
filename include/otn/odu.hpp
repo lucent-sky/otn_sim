@@ -7,6 +7,11 @@
 
 namespace otn {
 
+struct GroomedChild {
+    Odu child;
+    size_t slot_offset; // starting tributary slot
+};
+
 class Odu {
 public:
     // Leaf ODU (originating from client payload / OPU)
@@ -15,13 +20,17 @@ public:
     // Leaf ODU constructed directly from an OPU
     explicit Odu(OduLevel level, const Opu& opu);
 
-    // Aggregated ODU (from mux)
+    /*
+    DEPRECATED!! Implicit aggregation has been phased out in favor of explicit grooming
     Odu(OduLevel level, const std::vector<Odu>& children);
+    */
 
     OduLevel level() const;
     size_t payload_size() const;
     size_t slots() const;
     bool is_aggregated() const;
+    Odu(OduLevel level, std::vector<GroomedChild> groomed_children); //grooming constructor (mandatory)
+    const std::vector<GroomedChild>& groomed_children() const; //grooming introspection
 
 private:
     OduLevel level_;
@@ -32,7 +41,8 @@ private:
 
 MuxResult mux(
     OduLevel parent_level,
-    const std::vector<Odu>& children,
+    //const std::vector<Odu>& children, DEPRECATED for grooming
+    std::vector<GroomedChild> groomed_children_;
     Odu& out_parent
 );
 
