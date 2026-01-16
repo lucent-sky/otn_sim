@@ -37,4 +37,6 @@ struct MuxResult {
     }
 };
 
+size_t tributary_slots(OduLevel level);
+
 } // namespace otn

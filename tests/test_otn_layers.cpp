@@ -218,3 +218,19 @@ TEST(MuxTest, MixedChildLevelsFail) {
 
     EXPECT_EQ(result.status, MuxStatus::INVALID_HIERARCHY);
 }
+
+// ---------------- Tributary slots testing ----------------
+
+TEST(MuxTest, TributarySlotOverflowFails) {
+    Odu c1(OduLevel::ODU1, 1000);
+    Odu c2(OduLevel::ODU1, 1000);
+    Odu c3(OduLevel::ODU1, 1000);
+    Odu c4(OduLevel::ODU1, 1000);
+    Odu c5(OduLevel::ODU1, 1000);  // 5 slots
+
+    Odu parent(OduLevel::ODU2, 0); // ODU2 has 4 slots
+
+    auto result = mux(OduLevel::ODU2, {c1,c2,c3,c4,c5}, parent);
+    EXPECT_EQ(result.status, MuxStatus::INSUFFICIENT_CAPACITY);
+}
+

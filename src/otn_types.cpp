@@ -17,4 +17,14 @@ size_t nominal_capacity(OduLevel level) {
     }
 }
 
+size_t tributary_slots(OduLevel level) {
+    switch (level) {
+        case OduLevel::ODU1: return 1;
+        case OduLevel::ODU2: return 4;
+        case OduLevel::ODU3: return 16;
+        case OduLevel::ODU4: return 80;
+        default: return 0;
+    }
+}
+
 } // namespace otn

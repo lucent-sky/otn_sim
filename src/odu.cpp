@@ -5,7 +5,9 @@ namespace otn {
 
 namespace {
 
-// placeholder values for now
+/*
+DEPRECATED FUNCTION: used for payload-based capacity model
+
 size_t capacity_for_level(OduLevel level) {
     switch (level) {
         case OduLevel::ODU1: return 2500;
@@ -14,38 +16,49 @@ size_t capacity_for_level(OduLevel level) {
         default: return 0;
     }
 }
+*/
 
 } // anonymous namespace
 
-Odu::Odu(OduLevel level, size_t payload_bytes)
+// ---------------- LEAF ODU ----------------
+
+Odu::Odu(OduLevel level, size_t payload)
     : level_(level),
-      payload_bytes_(payload_bytes)
+      payload_bytes_(payload),
+      slot_count_(tributary_slots(level))
 {
-    if (payload_bytes_ > nominal_capacity(level_)) {
+    if (payload > nominal_capacity(level)) {
         throw std::runtime_error("ODU payload exceeds nominal capacity");
     }
 }
 
-Odu::Odu(OduLevel level, std::vector<Odu> children)
-    : level_(level),
-      children_(std::move(children))
-{
-    size_t sum = 0;
-    for (const auto& c : children_) {
-        sum += c.payload_size();
-    }
-
-    if (sum > nominal_capacity(level_)) {
-        throw std::runtime_error("Aggregated ODU exceeds nominal capacity");
-    }
-
-    payload_bytes_ = sum;
-}
+// ---------------- OPU → ODU ----------------
 
 Odu::Odu(OduLevel level, const Opu& opu)
     : level_(level),
-      payload_bytes_(opu.payload_size())
+      payload_bytes_(opu.payload_size()),
+      slot_count_(tributary_slots(level))
 {}
+
+// ---------------- AGGREGATED ODU ----------------
+
+Odu::Odu(OduLevel level, const std::vector<Odu>& children)
+    : level_(level),
+      payload_bytes_(0),
+      slot_count_(0),
+      children_(children)
+{
+    for (const auto& child : children_) {
+        payload_bytes_ += child.payload_size();
+        slot_count_   += child.slots();
+    }
+
+    if (slot_count_ > tributary_slots(level)) {
+        throw std::runtime_error("ODU tributary slot overflow");
+    }
+}
+
+// ---------------- ACCESSORS ----------------
 
 OduLevel Odu::level() const {
     return level_;
@@ -55,13 +68,15 @@ size_t Odu::payload_size() const {
     return payload_bytes_;
 }
 
-size_t Odu::max_capacity() const {
-    return capacity_for_level(level_);
+size_t Odu::slots() const {
+    return slot_count_;
 }
 
 bool Odu::is_aggregated() const {
     return !children_.empty();
 }
+
+// ---------------- MUX ----------------
 
 MuxResult mux(
     OduLevel parent_level,
@@ -81,24 +96,25 @@ MuxResult mux(
         }
     }
 
-    size_t total_payload = 0;
+    size_t total_slots = 0;
 
     for (const auto& child : children) {
         uint8_t child_lvl  = static_cast<uint8_t>(child.level());
         uint8_t parent_lvl = static_cast<uint8_t>(parent_level);
-        // parent must be exactly 1 higher than child to mux
+
+        // Parent must be exactly one level higher
         if (parent_lvl != child_lvl + 1) {
             return MuxResult::invalid_hierarchy(
                 "ODU levels must be adjacent"
             );
         }
-        total_payload += child.payload_size();
+
+        total_slots += child.slots();
     }
 
-    size_t capacity = nominal_capacity(parent_level);
-    if (total_payload > capacity) {
+    if (total_slots > tributary_slots(parent_level)) {
         return MuxResult::insufficient_capacity(
-            "Aggregated payload is above nominal capacity"
+            "Aggregated tributary slots exceed parent capacity"
         );
     }
 
