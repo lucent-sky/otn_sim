@@ -39,8 +39,8 @@ TEST(OduTest, AggregatedOduSumsChildren) {
     Odu child2(OduLevel::ODU1, 150);
 
     std::vector<GroomedChild> groomed = {
-        {&child1, child1.slots(), 0},
-        {&child2, child2.slots(), 1}
+        GroomedChild(&child1, child1.slots(), 0),
+        GroomedChild(&child2, child2.slots(), 1)
     };
     Odu parent(OduLevel::ODU2, groomed);
 
@@ -74,13 +74,13 @@ TEST(OduTest, NestedAggregationSumsCorrectly) {
     Odu leaf2(OduLevel::ODU1, 200);
 
     std::vector<GroomedChild> mid_children = {
-        {&leaf1, leaf1.slots(), 0},
-        {&leaf2, leaf2.slots(), 1}
+        GroomedChild(&leaf1, leaf1.slots(), 0),
+        GroomedChild(&leaf2, leaf2.slots(), 1)
     };
     Odu mid(OduLevel::ODU2, mid_children);
 
     std::vector<GroomedChild> top_children = {
-        {&mid, mid.slots(), 0}
+        GroomedChild(&mid, mid.slots(), 0)
     };
     Odu top(OduLevel::ODU3, top_children);
 
@@ -93,13 +93,14 @@ TEST(OduTest, AggregatedOduIsNotLeaf) {
     Odu child(OduLevel::ODU1, 100);
 
     std::vector<GroomedChild> groomed = {
-        {&child, child.slots(), 0}
+        GroomedChild(&child, child.slots(), 0)
     };
     Odu parent(OduLevel::ODU2, groomed);
 
     EXPECT_TRUE(parent.is_aggregated());
     EXPECT_NE(parent.payload_size(), 0u);
 }
+
 
 // ---------------- Anti-regression test ----------------
 TEST(OtuTest, FecDoesNotChangePayloadSize) {
@@ -175,10 +176,10 @@ TEST(GroomingTest, ValidExplicitGroomingSucceeds) {
     Odu c1(OduLevel::ODU1, 100);
     Odu c2(OduLevel::ODU1, 200);
 
-    GroomedChild g1{&c1, c1.slots(), 0};
-    GroomedChild g2{&c2, c2.slots(), 1};
-
-    std::vector<GroomedChild> groomed = {g1, g2};
+    std::vector<GroomedChild> groomed = {
+        GroomedChild(&c1, c1.slots(), 0),
+        GroomedChild(&c2, c2.slots(), 1)
+    };
     Odu parent(OduLevel::ODU2, groomed);
 
     EXPECT_EQ(parent.slots(), 2u);
@@ -190,10 +191,10 @@ TEST(GroomingTest, OverlappingSlotsFail) {
     Odu c1(OduLevel::ODU1, 100);
     Odu c2(OduLevel::ODU1, 200);
 
-    GroomedChild g1{&c1, c1.slots(), 0};
-    GroomedChild g2{&c2, c2.slots(), 0}; // overlap
-
-    std::vector<GroomedChild> groomed = {g1, g2};
+    std::vector<GroomedChild> groomed = {
+        GroomedChild(&c1, c1.slots(), 0),
+        GroomedChild(&c2, c2.slots(), 0) // overlap
+    };
 
     EXPECT_THROW(
         Odu(OduLevel::ODU2, groomed),
@@ -208,13 +209,13 @@ TEST(GroomingTest, SlotOverflowFails) {
     Odu c4(OduLevel::ODU1, 100);
     Odu c5(OduLevel::ODU1, 100); // 5 slots
 
-    GroomedChild g1{&c1, c1.slots(), 0};
-    GroomedChild g2{&c2, c2.slots(), 1};
-    GroomedChild g3{&c3, c3.slots(), 2};
-    GroomedChild g4{&c4, c4.slots(), 3};
-    GroomedChild g5{&c5, c5.slots(), 4}; // out of bounds
-
-    std::vector<GroomedChild> groomed = {g1, g2, g3, g4, g5};
+    std::vector<GroomedChild> groomed = {
+        GroomedChild(&c1, c1.slots(), 0),
+        GroomedChild(&c2, c2.slots(), 1),
+        GroomedChild(&c3, c3.slots(), 2),
+        GroomedChild(&c4, c4.slots(), 3),
+        GroomedChild(&c5, c5.slots(), 4) // out of bounds
+    };
 
     EXPECT_THROW(
         Odu(OduLevel::ODU2, groomed),
@@ -224,9 +225,9 @@ TEST(GroomingTest, SlotOverflowFails) {
 
 TEST(GroomingTest, NonAdjacentHierarchyFails) {
     Odu c1(OduLevel::ODU1, 100);
-    GroomedChild g{&c1, c1.slots(), 0};
-
-    std::vector<GroomedChild> groomed = {g};
+    std::vector<GroomedChild> groomed = {
+        GroomedChild(&c1, c1.slots(), 0)
+    };
 
     EXPECT_THROW(
         Odu(OduLevel::ODU3, groomed),
@@ -240,9 +241,9 @@ TEST(FragmentationTest, MetricsAreComputedCorrectly) {
     Odu c3(OduLevel::ODU1, 100);
 
     std::vector<GroomedChild> grooming = {
-        {&c1, c1.slots(), 0},
-        {&c2, c2.slots(), 2}, // gap at slot 1
-        {&c3, c3.slots(), 4}  // gap at slot 3
+        GroomedChild(&c1, c1.slots(), 0),
+        GroomedChild(&c2, c2.slots(), 2), // gap at slot 1
+        GroomedChild(&c3, c3.slots(), 4)  // gap at slot 3
     };
 
     auto m = analyze_fragmentation(grooming);
@@ -260,8 +261,8 @@ TEST(GroomingPlannerTest, SizeAwareRepackProducesValidGrooming) {
     Odu large(OduLevel::ODU1, 300);
 
     std::vector<GroomedChild> grooming = {
-        {&small, small.slots(), 2},
-        {&large, large.slots(), 0}
+        GroomedChild(&small, small.slots(), 2),
+        GroomedChild(&large, large.slots(), 0)
     };
 
     auto repacked = repack_grooming_size_aware(
@@ -280,9 +281,9 @@ TEST(GroomingPlannerTest, SizeAwareRepackReducesFragmentation) {
     Odu c(OduLevel::ODU1, 100);
 
     std::vector<GroomedChild> fragmented = {
-        {&a, a.slots(), 0},
-        {&b, b.slots(), 2}, // fragmentation
-        {&c, c.slots(), 6}
+        GroomedChild(&a, a.slots(), 0),
+        GroomedChild(&b, b.slots(), 2), // fragmentation
+        GroomedChild(&c, c.slots(), 6)
     };
 
     auto stable = repack_grooming(
@@ -300,4 +301,34 @@ TEST(GroomingPlannerTest, SizeAwareRepackReducesFragmentation) {
 
     EXPECT_LE(m_size.max_gap, m_stable.max_gap);
     EXPECT_GE(m_size.utilization, m_stable.utilization);
+}
+
+
+TEST(GroomingPlannerTest, DeterministicRepackProducesValidGrooming) {
+    Odu small(OduLevel::ODU1, 100);
+    Odu medium(OduLevel::ODU1, 200);
+    Odu large(OduLevel::ODU1, 300);
+
+    std::vector<GroomedChild> original = {
+        GroomedChild(&small, small.slots(), 0),
+        GroomedChild(&medium, medium.slots(), 2),
+        GroomedChild(&large, large.slots(), 1)
+    };
+
+    auto repacked = otn::repack_grooming_deterministic(OduLevel::ODU2, original);
+
+    // Verify no overlaps
+    std::vector<bool> slot_map(tributary_slots(OduLevel::ODU2), false);
+    for (const auto& g : repacked) {
+        for (size_t i = 0; i < g.slot_width; ++i) {
+            ASSERT_FALSE(slot_map[g.slot_offset + i]);
+            slot_map[g.slot_offset + i] = true;
+        }
+    }
+
+    // Verify utilization improved or unchanged
+    auto before = otn::analyze_fragmentation(original);
+    auto after = otn::analyze_fragmentation(repacked);
+
+    EXPECT_GE(after.utilization, before.utilization);
 }

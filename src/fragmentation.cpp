@@ -38,6 +38,57 @@ FragmentationMetrics analyze_fragmentation(const std::vector<GroomedChild>& groo
     return {gap_count, total_gap_slots, max_gap, span_slots, utilization};
 }
 
+std::vector<GroomedChild> repack_grooming_size_aware(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming
+) {
+    if (grooming.empty()) return {};
+
+    std::vector<GroomedChild> sorted = grooming;
+
+    // size-aware:
+    // prefer larger slot_width
+    // if equal, prefer larger payload size
+    std::stable_sort(sorted.begin(), sorted.end(),
+        [](const GroomedChild& a, const GroomedChild& b) {
+            if (a.slot_width != b.slot_width)
+                return a.slot_width > b.slot_width;
+            return a.child->payload_size() > b.child->payload_size();
+        }
+    );
+
+    size_t max_slots = tributary_slots(parent_level);
+    std::vector<bool> slot_map(max_slots, false);
+    std::vector<GroomedChild> repacked;
+
+    for (const auto& g : sorted) {
+        bool placed = false;
+        for (size_t start = 0; start + g.slot_width <= max_slots; ++start) {
+            bool free = true;
+            for (size_t i = 0; i < g.slot_width; ++i) {
+                if (slot_map[start + i]) {
+                    free = false;
+                    break;
+                }
+            }
+            if (free) {
+                for (size_t i = 0; i < g.slot_width; ++i)
+                    slot_map[start + i] = true;
+
+                repacked.emplace_back(g.child, g.slot_width, start);
+                placed = true;
+                break;
+            }
+        }
+
+        if (!placed) {
+            throw std::runtime_error("Cannot repack: not enough contiguous slots");
+        }
+    }
+
+    return repacked;
+}
+
 std::vector<GroomedChild> repack_grooming(
     OduLevel parent_level,
     const std::vector<GroomedChild>& grooming
@@ -45,39 +96,48 @@ std::vector<GroomedChild> repack_grooming(
     return repack_grooming_size_aware(parent_level, grooming);
 }
 
-std::vector<GroomedChild> repack_grooming_size_aware(
+std::vector<GroomedChild> repack_grooming_deterministic(
     OduLevel parent_level,
     const std::vector<GroomedChild>& grooming
 ) {
-    if (grooming.empty()) {
-        return {};
-    }
+    if (grooming.empty()) return {};
 
+    size_t max_slots = tributary_slots(parent_level);
+
+    // Step 1: Sort children descending by slot_width, preserve original order on ties
     std::vector<GroomedChild> sorted = grooming;
-
-    // Sort by descending slot width (size-aware)
-    std::sort(sorted.begin(), sorted.end(),
+    std::stable_sort(sorted.begin(), sorted.end(),
         [](const GroomedChild& a, const GroomedChild& b) {
             return a.slot_width > b.slot_width;
         }
     );
 
+    // Step 2: Greedy placement: place each child in first available contiguous slot
+    std::vector<bool> slot_map(max_slots, false); // marks used slots
     std::vector<GroomedChild> repacked;
-    std::size_t current_slot = 0;
-    std::size_t max_slots = tributary_slots(parent_level);
 
     for (const auto& g : sorted) {
-        if (current_slot + g.slot_width > max_slots) {
-            throw std::runtime_error("Repacking exceeds parent capacity");
+        // Find first contiguous space of size g.slot_width
+        size_t start = 0;
+        bool placed = false;
+        while (start + g.slot_width <= max_slots) {
+            bool free = true;
+            for (size_t i = 0; i < g.slot_width; ++i) {
+                if (slot_map[start + i]) { free = false; break; }
+            }
+            if (free) {
+                // Place child here
+                for (size_t i = 0; i < g.slot_width; ++i) slot_map[start + i] = true;
+                repacked.push_back({g.child, g.slot_width, start});
+                placed = true;
+                break;
+            }
+            ++start;
         }
 
-        repacked.push_back({
-            g.child,
-            g.slot_width,
-            current_slot
-        });
-
-        current_slot += g.slot_width;
+        if (!placed) {
+            throw std::runtime_error("Cannot repack: not enough contiguous slots");
+        }
     }
 
     return repacked;
