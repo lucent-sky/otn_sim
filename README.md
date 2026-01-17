@@ -1,3 +1,3 @@
-README in progress because the project is also in progress
+README in progress - will be updated sometime soon!  Once it's ready to use, I'll write about how to use it
+
 OTN simulator written in C++.
-Literally doesn't even function rn but I'm working on it <3
