@@ -4,16 +4,11 @@
 #include <cstddef>
 #include <vector>
 #include "opu.hpp"
+#include "otn/groomed_child.hpp"
 
 namespace otn {
 
 class Odu;  
-
-struct GroomedChild {
-    const Odu* child;
-    size_t slots;
-    size_t slot_offset;
-};
 
 class Odu {
 public:

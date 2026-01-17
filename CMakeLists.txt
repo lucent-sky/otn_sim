@@ -13,6 +13,7 @@ add_library(otn
     src/odu.cpp
     src/otu.cpp
     src/otn_types.cpp
+    src/fragmentation.cpp
 )
 
 # main

@@ -4,6 +4,8 @@
 #include "otn/opu.hpp"
 #include "otn/odu.hpp"
 #include "otn/otu.hpp"
+#include "otn/fragmentation.hpp"
+#include "otn/grooming_planner.hpp"
 
 using namespace otn;
 
@@ -232,8 +234,70 @@ TEST(GroomingTest, NonAdjacentHierarchyFails) {
     );
 }
 
-// ---------------- Grooming Planner Tests ----------------
-/* plan_grooming not implemented yet; tests left for future implementation
-TEST(GroomingPlannerTest, PlannerProducesValidGrooming) { ... }
-TEST(GroomingPlannerTest, PlannerThrowsOnOverflow) { ... }
-*/
+TEST(FragmentationTest, MetricsAreComputedCorrectly) {
+    Odu c1(OduLevel::ODU1, 100);
+    Odu c2(OduLevel::ODU1, 100);
+    Odu c3(OduLevel::ODU1, 100);
+
+    std::vector<GroomedChild> grooming = {
+        {&c1, c1.slots(), 0},
+        {&c2, c2.slots(), 2}, // gap at slot 1
+        {&c3, c3.slots(), 4}  // gap at slot 3
+    };
+
+    auto m = analyze_fragmentation(grooming);
+
+    EXPECT_EQ(m.gap_count, 2u);
+    EXPECT_EQ(m.total_gap_slots, 2u);
+    EXPECT_EQ(m.max_gap, 1u);
+    EXPECT_EQ(m.span_slots, 5u);
+    EXPECT_LT(m.utilization, 1.0);
+}
+
+
+TEST(GroomingPlannerTest, SizeAwareRepackProducesValidGrooming) {
+    Odu small(OduLevel::ODU1, 100);
+    Odu large(OduLevel::ODU1, 300);
+
+    std::vector<GroomedChild> grooming = {
+        {&small, small.slots(), 2},
+        {&large, large.slots(), 0}
+    };
+
+    auto repacked = repack_grooming_size_aware(
+        OduLevel::ODU2,
+        grooming
+    );
+
+    EXPECT_EQ(repacked.size(), 2u);
+    EXPECT_EQ(repacked[0].child, &large);
+    EXPECT_EQ(repacked[0].slot_offset, 0u);
+}
+
+TEST(GroomingPlannerTest, SizeAwareRepackReducesFragmentation) {
+    Odu a(OduLevel::ODU1, 100);
+    Odu b(OduLevel::ODU1, 300);
+    Odu c(OduLevel::ODU1, 100);
+
+    std::vector<GroomedChild> fragmented = {
+        {&a, a.slots(), 0},
+        {&b, b.slots(), 2}, // fragmentation
+        {&c, c.slots(), 6}
+    };
+
+    auto stable = repack_grooming(
+        OduLevel::ODU2,
+        fragmented
+    );
+
+    auto size_aware = repack_grooming_size_aware(
+        OduLevel::ODU2,
+        fragmented
+    );
+
+    auto m_stable = analyze_fragmentation(stable);
+    auto m_size   = analyze_fragmentation(size_aware);
+
+    EXPECT_LE(m_size.max_gap, m_stable.max_gap);
+    EXPECT_GE(m_size.utilization, m_stable.utilization);
+}

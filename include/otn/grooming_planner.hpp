@@ -29,5 +29,16 @@ repack_grooming(
     const std::vector<GroomedChild>& current
 );
 
+/*
+ *  - Size-aware repacking
+ *  - Reorders children by descending slot size
+ *  - Packs largest first to reduce fragmentation
+ */
+std::vector<GroomedChild>
+repack_grooming_size_aware(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& current
+);
+
 
 } // namespace otn

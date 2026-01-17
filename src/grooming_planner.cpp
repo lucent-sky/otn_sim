@@ -117,5 +117,49 @@ repack_grooming(
     return result;
 }
 
+std::vector<GroomedChild>
+repack_grooming_size_aware(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& current
+) {
+    if (current.empty()) {
+        return {};
+    }
+
+    const size_t parent_slots = tributary_slots(parent_level);
+
+    // Copy and sort by descending size
+    std::vector<GroomedChild> sorted = current;
+    std::stable_sort(
+        sorted.begin(),
+        sorted.end(),
+        [](const auto& a, const auto& b) {
+            return a.slots > b.slots;
+        }
+    );
+
+    std::vector<GroomedChild> result;
+    result.reserve(sorted.size());
+
+    size_t cursor = 0;
+
+    for (const auto& g : sorted) {
+        if (cursor + g.slots > parent_slots) {
+            throw std::runtime_error(
+                "Size-aware repack exceeds parent capacity"
+            );
+        }
+
+        result.push_back(GroomedChild{
+            .child = g.child,
+            .slots = g.slots,
+            .slot_offset = cursor
+        });
+
+        cursor += g.slots;
+    }
+
+    return result;
+}
 
 } // namespace otn
