@@ -143,4 +143,23 @@ std::vector<GroomedChild> repack_grooming_deterministic(
     return repacked;
 }
 
+double fragmentation_cost(
+    const FragmentationMetrics& m,
+    const FragmentationCostWeights& w
+) {
+    if (m.span_slots == 0) return 0.0;
+
+    const double utilization_penalty = 1.0 - m.utilization;
+    const double gap_slots_ratio =
+        static_cast<double>(m.total_gap_slots) / m.span_slots;
+    const double max_gap_ratio =
+        static_cast<double>(m.max_gap) / m.span_slots;
+
+    return
+        w.utilization_weight * utilization_penalty +
+        w.gap_count_weight   * static_cast<double>(m.gap_count) +
+        w.gap_slots_weight   * gap_slots_ratio +
+        w.max_gap_weight     * max_gap_ratio;
+}
+
 } // namespace otn
