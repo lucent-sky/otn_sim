@@ -40,5 +40,28 @@ repack_grooming_size_aware(
     const std::vector<GroomedChild>& current
 );
 
+/*
+ *  - Marks slots as open or closed based on whether child occupies them
+ */
+std::vector<bool> occupied_slots(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming
+);
+
+/*
+ *  - Returns all slot offsets where candidate can be placed
+ *  - No overlaps and within parent capacity
+ */
+std::vector<size_t> feasible_offsets(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming,
+    const Odu& candidate
+);
+
+struct AdmissionResult {
+    bool admitted;
+    size_t chosen_offset;
+    double cost;
+};
 
 } // namespace otn
