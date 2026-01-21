@@ -14,6 +14,8 @@ add_library(otn
     src/otu.cpp
     src/otn_types.cpp
     src/fragmentation.cpp
+    src/groomed_child.cpp
+    src/grooming_planner.cpp
 )
 
 # main

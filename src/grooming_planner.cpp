@@ -1,4 +1,5 @@
 #include "otn/grooming_planner.hpp"
+#include "otn/odu.hpp"
 #include <stdexcept>
 #include <algorithm>
 
@@ -49,11 +50,7 @@ plan_grooming(
             );
         }
 
-        result.push_back(GroomedChild{
-            .child = &child,
-            .slots = child_slots,
-            .slot_offset = cursor
-        });
+        result.emplace_back(&child, cursor);
 
         cursor += child_slots;
     }
@@ -61,6 +58,8 @@ plan_grooming(
     return result;
 }
 
+/*
+ * NOTE: reimplemented in fragmentation.cpp
 std::vector<GroomedChild>
 repack_grooming(
     OduLevel parent_level,
@@ -97,7 +96,7 @@ repack_grooming(
 
     // Stable left-compaction
     for (const auto& g : current) {
-        size_t child_slots = g.slots;
+        size_t child_slots = g.slot_width;
 
         if (cursor + child_slots > parent_slots) {
             throw std::runtime_error(
@@ -105,11 +104,7 @@ repack_grooming(
             );
         }
 
-        result.push_back(GroomedChild{
-            .child = g.child,
-            .slots = child_slots,
-            .slot_offset = cursor
-        });
+        result.emplace_back(g.child, cursor);
 
         cursor += child_slots;
     }
@@ -134,7 +129,7 @@ repack_grooming_size_aware(
         sorted.begin(),
         sorted.end(),
         [](const auto& a, const auto& b) {
-            return a.slots > b.slots;
+            return a.slot_width > b.slot_width;
         }
     );
 
@@ -144,22 +139,45 @@ repack_grooming_size_aware(
     size_t cursor = 0;
 
     for (const auto& g : sorted) {
-        if (cursor + g.slots > parent_slots) {
+        if (cursor + g.slot_width > parent_slots) {
             throw std::runtime_error(
                 "Size-aware repack exceeds parent capacity"
             );
         }
 
-        result.push_back(GroomedChild{
-            .child = g.child,
-            .slots = g.slots,
-            .slot_offset = cursor
-        });
+        result.emplace_back(g.child, cursor);
 
-        cursor += g.slots;
+        cursor += g.slot_width;
     }
 
     return result;
+}
+    */
+
+std::vector<bool> occupied_slots(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming
+) {
+    const std::size_t max_slots = tributary_slots(parent_level);
+    std::vector<bool> slots(max_slots, false);
+
+    for (const auto& g : grooming) {
+        const std::size_t start = g.slot_offset;
+        const std::size_t width = g.slot_width;
+
+        if (start + width > max_slots) {
+            throw std::runtime_error("GroomedChild exceeds parent slot capacity");
+        }
+
+        for (std::size_t i = 0; i < width; ++i) {
+            if (slots[start + i]) {
+                throw std::runtime_error("Overlapping GroomedChild slots detected");
+            }
+            slots[start + i] = true;
+        }
+    }
+
+    return slots;
 }
 
 } // namespace otn

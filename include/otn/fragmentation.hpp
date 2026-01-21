@@ -35,6 +35,11 @@ std::vector<GroomedChild> repack_grooming(
     const std::vector<GroomedChild>& grooming
 );
 
+std::vector<GroomedChild> repack_grooming_size_aware(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming
+);
+
 std::vector<GroomedChild> repack_grooming_deterministic(
     OduLevel parent_level,
     const std::vector<GroomedChild>& grooming

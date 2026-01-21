@@ -17,28 +17,19 @@ plan_grooming(
     const std::vector<Odu>& children
 );
 
-/*
- *  - Fragmentation-aware repacking
- *  - Accepts an existing grooming layout
- *  - Reassigns slot offsets to eliminate gaps
- *  - Preserves child ordering
- */
-std::vector<GroomedChild>
+
+/* std::vector<GroomedChild>
 repack_grooming(
     OduLevel parent_level,
     const std::vector<GroomedChild>& current
 );
 
-/*
- *  - Size-aware repacking
- *  - Reorders children by descending slot size
- *  - Packs largest first to reduce fragmentation
- */
+
 std::vector<GroomedChild>
 repack_grooming_size_aware(
     OduLevel parent_level,
     const std::vector<GroomedChild>& current
-);
+); */
 
 /*
  *  - Marks slots as open or closed based on whether child occupies them

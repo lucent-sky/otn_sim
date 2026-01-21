@@ -332,3 +332,100 @@ TEST(GroomingPlannerTest, DeterministicRepackProducesValidGrooming) {
 
     EXPECT_GE(after.utilization, before.utilization);
 }
+
+// ---------------- occupied_slots tests ----------------
+
+TEST(GroomingPlannerTest, OccupiedSlotsSingleChild) {
+    Odu child(OduLevel::ODU1, 100);
+
+    std::vector<GroomedChild> grooming = {
+        GroomedChild(&child, 1)
+    };
+
+    auto slots = occupied_slots(OduLevel::ODU2, grooming);
+
+    EXPECT_FALSE(slots[0]);
+    EXPECT_TRUE(slots[1]);
+    EXPECT_FALSE(slots[2]);
+}
+
+TEST(GroomingPlannerTest, OccupiedSlotsMultipleChildren) {
+    Odu a(OduLevel::ODU1, 100);
+    Odu b(OduLevel::ODU1, 100);
+    Odu c(OduLevel::ODU1, 100);
+
+    // Adjust offsets to fit within parent slots
+    std::vector<GroomedChild> grooming = {
+        GroomedChild(&a, 0), // slot_offset 0, width = 1
+        GroomedChild(&b, 1), // slot_offset 1, width = 1
+        GroomedChild(&c, 2)  // slot_offset 2, width = 1
+    };
+
+    OduLevel parent_level = OduLevel::ODU2;
+    std::size_t max_slots = otn::tributary_slots(parent_level);
+    std::cout << "Parent level slots: " << max_slots << "\n";
+
+    for (const auto& g : grooming) {
+        std::cout << "Child at offset " << g.slot_offset
+                  << " with width " << g.slot_width << "\n";
+    }
+
+    std::vector<bool> slots;
+    try {
+        slots = otn::occupied_slots(parent_level, grooming);
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Exception in occupied_slots(): " << e.what() << "\n";
+        FAIL() << "occupied_slots threw an exception";
+    }
+
+    // Validate occupancy
+    EXPECT_TRUE(slots[0]);
+    EXPECT_TRUE(slots[1]);
+    EXPECT_TRUE(slots[2]);
+    EXPECT_FALSE(slots[3]); // last slot remains free
+}
+
+
+TEST(GroomingPlannerTest, OccupiedSlotsWithContiguousChildren) {
+    Odu a(OduLevel::ODU1, 100);
+    Odu b(OduLevel::ODU1, 100);
+
+    std::vector<GroomedChild> grooming = {
+        GroomedChild(&a, 0),
+        GroomedChild(&b, 1)
+    };
+
+    auto slots = occupied_slots(OduLevel::ODU2, grooming);
+
+    EXPECT_TRUE(slots[0]);
+    EXPECT_TRUE(slots[1]);
+    EXPECT_FALSE(slots[2]);
+}
+
+TEST(GroomingPlannerTest, OccupiedSlotsDetectsOverlap) {
+    Odu a(OduLevel::ODU1, 100);
+    Odu b(OduLevel::ODU1, 100);
+
+    std::vector<GroomedChild> grooming = {
+        GroomedChild(&a, 1),
+        GroomedChild(&b, 1) // overlap
+    };
+
+    EXPECT_THROW(
+        occupied_slots(OduLevel::ODU2, grooming),
+        std::runtime_error
+    );
+}
+
+TEST(GroomingPlannerTest, OccupiedSlotsDetectsOverflow) {
+    Odu a(OduLevel::ODU1, 100);
+
+    std::vector<GroomedChild> grooming = {
+        GroomedChild(&a, tributary_slots(OduLevel::ODU2)) // out of bounds
+    };
+
+    EXPECT_THROW(
+        occupied_slots(OduLevel::ODU2, grooming),
+        std::runtime_error
+    );
+}
