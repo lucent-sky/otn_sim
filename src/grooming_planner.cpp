@@ -180,4 +180,40 @@ std::vector<bool> occupied_slots(
     return slots;
 }
 
+std::vector<std::size_t> feasible_offsets(
+    OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming,
+    const Odu& candidate
+) {
+    const std::size_t max_slots = tributary_slots(parent_level);
+    const std::size_t width = tributary_slots(candidate.level());
+
+    if (width > max_slots) {
+        return {}; // candidate can never fit
+    }
+
+    const std::vector<bool> occupied =
+        occupied_slots(parent_level, grooming);
+
+    std::vector<std::size_t> offsets;
+
+    // Left-to-right scan
+    for (std::size_t start = 0; start + width <= max_slots; ++start) {
+        bool fits = true;
+
+        for (std::size_t i = 0; i < width; ++i) {
+            if (occupied[start + i]) {
+                fits = false;
+                break;
+            }
+        }
+
+        if (fits) {
+            offsets.push_back(start);
+        }
+    }
+
+    return offsets;
+}
+
 } // namespace otn
