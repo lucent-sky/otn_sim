@@ -55,4 +55,10 @@ struct AdmissionResult {
     double cost;
 };
 
+struct Candidate {
+    const Odu* child;
+    std::size_t offset;
+    double cost;
+};
+
 } // namespace otn
