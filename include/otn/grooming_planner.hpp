@@ -61,4 +61,11 @@ struct Candidate {
     double cost;
 };
 
+std::vector<GroomedChild>
+admit_candidates(
+    OduLevel parent_level,
+    std::vector<GroomedChild> current,
+    const std::vector<Candidate>& candidates
+);
+
 } // namespace otn
