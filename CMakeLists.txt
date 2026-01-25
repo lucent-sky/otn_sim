@@ -16,6 +16,7 @@ add_library(otn
     src/fragmentation.cpp
     src/groomed_child.cpp
     src/grooming_planner.cpp
+    src/candidate.cpp
 )
 
 # main
@@ -39,6 +40,7 @@ enable_testing()
 
 add_executable(otn_tests
     tests/test_otn_layers.cpp
+    tests/test_admission.cpp
 )
 
 target_link_libraries(otn_tests

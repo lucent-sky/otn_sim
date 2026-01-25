@@ -4,8 +4,4 @@
 
 namespace otn {
 
-struct Candidate {
-    const Odu* child;
-};
-
 } // namespace otn
