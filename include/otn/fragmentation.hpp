@@ -23,7 +23,9 @@ struct FragmentationCostWeights {
     double max_gap_weight     = 0.2;
 };
 
-FragmentationMetrics analyze_fragmentation(const std::vector<GroomedChild>& grooming);
+FragmentationMetrics analyze_fragmentation(
+    // OduLevel parent_level,
+    const std::vector<GroomedChild>& grooming);
 
 double fragmentation_cost(
     const FragmentationMetrics& metrics,

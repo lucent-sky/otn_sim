@@ -6,37 +6,67 @@
 
 namespace otn {
 
-FragmentationMetrics analyze_fragmentation(const std::vector<GroomedChild>& grooming) {
+FragmentationMetrics analyze_fragmentation(
+    const std::vector<GroomedChild>& grooming
+) {
     if (grooming.empty()) {
-        return {0, 0, 0, 0, 0.0};  
+        return {0, 0, 0, 0, 0.0};
     }
+
+    // Work on a sorted copy
+    std::vector<GroomedChild> sorted = grooming;
+    std::sort(sorted.begin(), sorted.end(),
+        [](const GroomedChild& a, const GroomedChild& b) {
+            return a.slot_offset < b.slot_offset;
+        }
+    );
 
     size_t gap_count = 0;
     size_t total_gap_slots = 0;
     size_t max_gap = 0;
-    size_t first_slot = grooming.front().slot_offset;
-    size_t last_slot = grooming.front().slot_offset + grooming.front().child->slots() - 1;
 
-    // Compute span and gaps
-    for (size_t i = 1; i < grooming.size(); ++i) {
-        size_t prev_end = grooming[i-1].slot_offset + grooming[i-1].child->slots() - 1;
-        size_t gap = 0;
+    size_t first_slot = sorted.front().slot_offset;
+    size_t last_slot =
+        sorted.front().slot_offset + sorted.front().slot_width - 1;
 
-        if (grooming[i].slot_offset > prev_end + 1) {
-            gap = grooming[i].slot_offset - (prev_end + 1);
+    for (size_t i = 1; i < sorted.size(); ++i) {
+        size_t prev_end =
+            sorted[i - 1].slot_offset +
+            sorted[i - 1].slot_width - 1;
+
+        if (sorted[i].slot_offset > prev_end + 1) {
+            size_t gap = sorted[i].slot_offset - (prev_end + 1);
             ++gap_count;
             total_gap_slots += gap;
-            if (gap > max_gap) max_gap = gap;
+            max_gap = std::max(max_gap, gap);
         }
 
-        last_slot = std::max(last_slot, grooming[i].slot_offset + grooming[i].child->slots() - 1);
+        last_slot = std::max(
+            last_slot,
+            sorted[i].slot_offset + sorted[i].slot_width - 1
+        );
     }
 
     size_t span_slots = last_slot - first_slot + 1;
-    double utilization = span_slots == 0 ? 0.0 : double(span_slots - total_gap_slots) / double(span_slots);
 
-    return {gap_count, total_gap_slots, max_gap, span_slots, utilization};
+    const size_t occupied_slots =
+        span_slots - total_gap_slots;
+
+    double utilization =
+        span_slots == 0
+            ? 0.0
+            : static_cast<double>(occupied_slots) /
+              static_cast<double>(span_slots);
+
+    return {
+        gap_count,
+        total_gap_slots,
+        max_gap,
+        span_slots,
+        utilization
+    };
 }
+
 
 std::vector<GroomedChild> repack_grooming_size_aware(
     OduLevel parent_level,

@@ -3,6 +3,7 @@
 #include "otn/fragmentation.hpp"
 
 #include <stdexcept>
+#include <limits>
 
 namespace otn {
 
@@ -17,20 +18,35 @@ admit_candidates(
             throw std::runtime_error("Null candidate child");
         }
 
-        // Find feasible offsets given current grooming
         const auto offsets =
             feasible_offsets(parent_level, current, *cand.child);
 
         if (offsets.empty()) {
-            // Minimal policy: reject silently
-            // Later: return AdmissionResult, log, or throw
-            continue;
+            continue; // cannot admit this candidate
         }
 
-        // Greedy: choose leftmost offset
-        const std::size_t chosen = offsets.front();
+        double best_cost = std::numeric_limits<double>::infinity();
+        std::size_t best_offset = 0;
+        bool found = false;
 
-        current.emplace_back(cand.child, chosen);
+        for (std::size_t offset : offsets) {
+            // Simulate placement
+            std::vector<GroomedChild> trial = current;
+            trial.emplace_back(cand.child, offset);
+
+            auto metrics = analyze_fragmentation(trial);
+            const double cost  = fragmentation_cost(metrics);
+
+            if (cost < best_cost) {
+                best_cost = cost;
+                best_offset = offset;
+                found = true;
+            }
+        }
+
+        if (found) {
+            current.emplace_back(cand.child, best_offset);
+        }
     }
 
     return current;
